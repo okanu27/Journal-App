@@ -6,7 +6,8 @@ html {
 
 body {
   font-family: 'Arial', Arial, Helvetica, sans-serif;
-  background-color: #111827;
+  background-color: var(--color-sky-800);
+  background-image: url("https://www.transparenttextures.com/patterns/cubes.png");
   color: #0c0f11;
   margin: 0;
 }

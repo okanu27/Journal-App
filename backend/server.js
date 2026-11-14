@@ -1,9 +1,11 @@
 import express from 'express';
 import bodyParser from 'body-parser';
-import { useNavigate, useParams } from 'react-router-dom';
 import cors from "cors";
 import dotenv from "dotenv";
 import { supabase } from './lib/supabase.js';
+import { getUserSupabase } from './lib/userSupabase.js';
+import { verifyToken } from './middleware/verifyToken.js';
+
 
 dotenv.config();
 
@@ -27,7 +29,7 @@ App.use(express.static('public'));
 
 let journalEntries = [];
 
-App.post('/api/journal', async (req, res) => {
+App.post('/api/journal', verifyToken, async (req, res) => {
     try {
 
     console.log("request body", req.body);
@@ -42,12 +44,24 @@ App.post('/api/journal', async (req, res) => {
         });
     }
 
+    const user = await getUserSupabase(req.accessToken);
+
+    if (!user) {
+        return res.status(401).json({
+            success: false,
+            message: "Unauthorized. User not found.",
+        });
+    }
+
+    console.log("Authenticated user:", user);
+
     const { data, error } = await supabase
         .from("journal_entries")
         .insert([
             {
             title: title.trim(),
             content: content.trim(),
+            user_id: user.id,
             },
         ])
         .select()
@@ -77,30 +91,189 @@ App.post('/api/journal', async (req, res) => {
             message: "An unexpected server error occurred.",
         });
     }
-    //const newEntry = {
-      //  id: Date.now(),
-        //title,
-        //content,
-        //date: new Date().toLocaleString(),
-    //};
-
-    //journalEntries.unshift(newEntry);
-
-    //console.log("captured post", newEntry);
-
-    //res.status(200).json({ 
-        //sucess: true, 
-       // message: "saved!",
-        //entry: newEntry,
-    //});
 });
 
-App.get('/api/journal', async (req, res) => {
+App.post("/api/journal/contact", async (req, res) => {
+    
     try {
+
+        console.log("body:", req.body);
+
+        const { name, email, message } = req.body;
+
+        if(!name || !email || !message) {
+            return res.status(400).json({
+                success: false,
+                message: "All fields are required.",
+            });
+        }
+
+        const { data, error } = await supabase
+            .from("contact_submissions")
+            .insert({
+                    name: name.trim(),
+                    email: email.trim(),
+                    message: message,
+                });
+            
+        if (error) {
+
+            return res.status(500).json({
+                success: false,
+                message: "Failed to save your contact form.",
+            });
+        }
+
+        res.status(200).json({
+            success: true,
+            message: "Your contact was sent successfully.",
+            data,
+        });
+
+    } catch (error) {
+        console.error("server error", error.message);
+
+        return res.status(500).json({
+            success: false,
+            message: "Unexpected server error occured",
+        });
+    }
+});
+
+App.post("/api/register", async (req, res) => {
+    try {
+        const { email, password } = req.body;
+
+        if (!email || !password) {
+            return res.status(400).json({
+                success: false,
+                message: "Email and Password are required.",
+            });
+        }
+
+        const { data, error } = await supabase.auth.signUp({
+            email: email.trim(),
+            password: password.trim(),
+        });
+
+        if (error) {
+            console.error("Supabase error:", error.message);
+
+            return res.status(500).json({
+                success: false,
+                message: "Failed to register user.",
+            });
+        }
+
+        console.log("Registration successful:", data);
+
+        res.status(200).json({
+            success: true,
+            message: "Registration successful! Please check your email to confirm your account.",
+            data,
+        });
+    } catch (error) {
+        console.error("Server error:", error.message);
+
+        res.status(500).json({
+            success: false,
+            message: "An unexpected server error occurred.",
+        });
+    }
+});
+
+App.post("/api/login", async (req, res) => {
+    try {
+        const { email, password } = req.body;
+
+        if (!email || !password) {
+            return res.status(400).json({
+                success: false,
+                message: "Email and Password are required.",
+            });
+        }
+
+        const { data, error } = await supabase.auth.signInWithPassword({
+            email: email.trim(),
+            password: password.trim(),
+        });
+
+        if (error) {
+            console.error("Supabase error:", error.message);
+
+            return res.status(401).json({
+                success: false,
+                message: "Invalid email or password.",
+            });
+        }
+
+        console.log("Login successful:", data);
+
+        res.status(200).json({
+            success: true,
+            message: "Login successful!",
+            data,
+        });
+    } catch (error) {
+        console.error("Server error:", error.message);
+
+        res.status(500).json({
+            success: false,
+            message: "An unexpected server error occurred.",
+        });
+    }
+});
+
+App.post("/api/logout", async (req, res) => {
+    try {
+        const { data, error } = await supabase.auth.signOut();
+
+        if (error) {
+            console.error("Supabase error:", error.message);
+
+            return res.status(500).json({
+                success: false,
+                message: "Failed to log out.",
+            });
+        }
+
+        console.log("Logout successful:", data);
+
+        res.status(200).json({
+            success: true,
+            message: "Logout successful!",
+            data,
+        });
+    } catch (error) {
+        console.error("Server error:", error.message);
+
+        res.status(500).json({
+            success: false,
+            message: "An unexpected server error occurred.",
+        });
+    }
+});
+
+
+App.get('/api/journal', verifyToken, async (req, res) => {
+    try {
+
+        const user = await getUserSupabase(req.accessToken);
+
+        if (!user) {
+            return res.status(401).json({
+                success: false,
+                message: "Unauthorized. User not found.",
+            });
+        }
+
+        console.log("Authenticated user:", user);
+
         const { data, error } = await supabase
             .from("journal_entries")
             .select("*")
             .order("created_at", { ascending: false });
+
 
         if (error) throw error;
             
@@ -116,8 +289,20 @@ App.get('/api/journal', async (req, res) => {
     }
 });
 
-App.put("/api/journal/:id", async (req, res) => {
+App.put("/api/journal/:id", verifyToken, async (req, res) => {
     try {
+
+        const user = await getUserSupabase(req.accessToken);
+
+        if (!user) {
+            return res.status(401).json({
+                success: false,
+                message: "Unauthorized. User not found.",
+            });
+        }
+
+        console.log("Authenticated user:", user);
+
         const { id } = req.params;
         const { title, content } = req.body;
 
@@ -161,9 +346,7 @@ App.put("/api/journal/:id", async (req, res) => {
     }
 });
 
-App.delete("/api/journal/:id", async (req, res) => {
-    console.log("---DEBUGGING DELETE---");
-    console.log("Raw param ID:", req.params.id, "Type:", typeof req.params.id);
+App.delete("/api/journal/:id", verifyToken, async (req, res) => {
 
     const id = Number(req.params.id);
     try {

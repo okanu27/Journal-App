@@ -1,4 +1,8 @@
 import { useState, useEffect } from 'react';
+import DeleteIcon from '@mui/icons-material/Delete';
+import EditNoteIcon from '@mui/icons-material/EditNote';
+import { supabase } from '../lib/supabaseClient.js';
+
 
 function Home() {
 
@@ -19,17 +23,30 @@ function Home() {
    useEffect(() => {
     const fetchJournalEntries = async () => {
         try {
+
+            const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+
+            if (sessionError || !session) {
+                console.error("User is not authenticated. Please log in.");
+                return;
+            }
+
             setLoading(true);
 
             const response = await fetch(
-                `${import.meta.env.VITE_API_URL}/api/journal`);
+                `${import.meta.env.VITE_API_URL}/api/journal`,
+                {
+                    headers: {
+                        'Authorization': `Bearer ${session.access_token}`
+                    }
+                }
+            );
 
             const result = await response.json();
 
             if (result.success) {
                 setEntries(result.data);
             }
-
         } catch (err) {
             console.error("Failed to fetch:", err);
         } finally {
@@ -43,10 +60,18 @@ function Home() {
 // Entry updating Function
    const handleUpdate = async (id) => {
     try {
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+
+        if (sessionError || !session) {
+            console.error("User is not authenticated. Please log in.");
+            return;
+        }
+
         const response = await fetch(`${import.meta.env.VITE_API_URL}/api/journal/${id}`, {
             method: "PUT",
             headers: {
-                "Content-Type": "application/json"
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${session.access_token}`
             },
             body: JSON.stringify({ title: editingTitle, content: editingContent })
         });
@@ -69,8 +94,18 @@ function Home() {
         if (!window.confirm("Are you sure you want to delete this journal entry?")) return;
 
         try {
+            const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+
+            if (sessionError || !session) {
+                console.error("User is not authenticated. Please log in.");
+                return;
+            }
+
             const response = await fetch(`${import.meta.env.VITE_API_URL}/api/journal/${id}`, {
-                method: "DELETE"
+                method: "DELETE",
+                headers: {
+                    "Authorization": `Bearer ${session.access_token}`
+                }
             });
 
             // Check if the server returned a success status (200-299)
@@ -94,18 +129,18 @@ function Home() {
 
   return (
         <section id="home" 
-            className="relative h-[calc(100vh-64px)] overflow-y-auto bg-white rounded-sm">
+            className="relative h-[calc(100vh-64px)] overflow-y-auto rounded-sm">
             <div 
                 className="max-w-7xl mx-auto px-4 py-8">
-                <h1 className="text-3xl text-center font-bold text-gray-800 mb-5">
+                <h1 className="text-3xl text-center font-bold text-white mb-5">
                     Welcome to My Journal
                 </h1>
 
-                <p className="text-gray-600 text-center mb-2">
+                <p className="text-gray-200 text-center mb-2">
                     This is a simple journal application where you can post your thoughts and experiences.
                 </p>
 
-                <p className="text-gray-600 text-center">
+                <p className="text-gray-200 text-center">
                     Use the navigation bar above to explore different sections of the application.
                 </p>
 
@@ -115,12 +150,12 @@ function Home() {
             {/* Placeholder for journal entries display. You can map over postEntries and display them here. */}
             <div className="max-w-7xl mx-auto px-4 py-8">
                 {entries.length === 0 ? (
-                    <p className="text-gray-500 text-center">
-                        No journal entries yet. Be the first to share your thoughts!
+                    <p className="text-white text-center">
+                         loading journal entries or no entries available. Start by composing a new entry!
                     </p>
                 ) : (
                     entries.map((entry) => (
-                        <div key={entry.id} className="border border-gray-200 rounded-lg shadow-md bg-gray-100 py-6 px-6 mb-4">
+                        <div key={entry.id} className="border max-w-3xl mx-auto border-gray-200 rounded-lg shadow-xl/20 bg-mist-300 py-6 px-6 mb-4">
                             {editingId === entry.id ? (
                                 // EDITING MODE INTERFACE
                                 <div className='space-y-3'>
@@ -165,7 +200,7 @@ function Home() {
                                 </p>
 
                                 <p className="text-sm border-t border-gray-300 text-gray-500 pt-4">
-                                    Posted on: {new Date(entry.created_at).toLocaleDateString('en-US',
+                                    Posted On: {new Date(entry.created_at).toLocaleDateString('en-US',
                                         dateOption
                                     )}
                                 </p>
@@ -179,14 +214,15 @@ function Home() {
                                         }}
                                         className='bg-blue-600 text-white px-2 py-2 rounded-md hover:bg-blue-700 text-sm font-medium block'
                                     >
-                                        Edit
+                                        <EditNoteIcon style={{ fontSize: '1.25rem' }} />
                                     </button>
 
                                     <button
                                         onClick={() => handleDelete(entry.id)}
                                         className='bg-red-600 text-white px-2 py-2 rounded-md hover:bg-red-700 text-sm font-medium'
                                     >
-                                        Delete
+                                        <DeleteIcon style={{ fontSize: '1.25rem' }} />
+                                        
                                     </button>
                                 </div>
                             </article>

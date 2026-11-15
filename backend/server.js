@@ -151,6 +151,13 @@ App.post("/api/register", async (req, res) => {
             });
         }
 
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+            return res.status(400).json({
+                success: false,
+                message: "Please enter a valid email address.",
+            });
+        }
+
         const { data, error } = await supabase.auth.signUp({
             email: email.trim(),
             password: password.trim(),

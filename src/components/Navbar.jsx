@@ -4,6 +4,11 @@ import { FiX } from "react-icons/fi";
 import { useState } from "react";
 import { supabase } from "../lib/supabaseClient.js";
 import { useNavigate } from "react-router-dom";
+import { TbLogout2 } from "react-icons/tb";
+import { CiHome } from "react-icons/ci";
+import { CiUser } from "react-icons/ci";
+import { MdEmail } from "react-icons/md";
+
 
 function Navbar() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -11,6 +16,9 @@ function Navbar() {
   const navigate = useNavigate();
 
   const handleLogout = async () => {
+
+    setIsMenuOpen(false); // Close the menu when logging out
+
     try {
       const { error } = await supabase.auth.signOut();
       if (error) throw error;
@@ -32,8 +40,8 @@ function Navbar() {
                 <li><Link to="/about" className="text-white hover:text-sky-200">About</Link></li>
                 <li><Link to="/contact" className="text-white hover:text-sky-200">Contact</Link></li>
                 <li><Link to="/Compose" className="text-white hover:text-sky-200">POST A JOURNAL</Link></li>
-                <li><button onClick={handleLogout} className="bg-red-600 text-white py-2 p-2 rounded-md font-medium hover:bg-red-700 hover:text-gray-200">
-                  Logout
+                <li><button onClick={handleLogout} className="bg-red-600 text-white py-1 p-1 rounded-md font-medium hover:bg-red-700 hover:text-gray-200">
+                  <TbLogout2 className="inline mr-2" />
                 </button></li>
               </ul>
             </div>
@@ -54,9 +62,9 @@ function Navbar() {
         {/* Mobile Menu Dropdown Panel */}
         {isMenuOpen && (
           <div className="absolute top-full text-white left-0 w-full bg-sky-950 border-t border-slate-950 border-gray-800 p-4 flex flex-col gap-4 shadow-xl md:hidden">
-            <Link to="/" onClick={() => setIsMenuOpen(false)} className="py-2 border-b border-gray-900 hover:text-gray-300">Home</Link>
-            <Link to="/about" onClick={() => setIsMenuOpen(false)} className="py-2 border-b border-gray-900 hover:text-gray-300">About</Link>
-            <Link to="/contact" onClick={() => setIsMenuOpen(false)} className="py-2 border-b border-gray-900 hover:text-gray-300">Contact</Link>
+            <Link to="/" onClick={() => setIsMenuOpen(false)} className="py-2 border-b border-gray-900 hover:text-gray-300"> <CiHome className="inline mr-2" />Home</Link>
+            <Link to="/about" onClick={() => setIsMenuOpen(false)} className="py-2 border-b border-gray-900 hover:text-gray-300"> <CiUser className="inline mr-2" />About</Link>
+            <Link to="/contact" onClick={() => setIsMenuOpen(false)} className="py-2 border-b border-gray-900 hover:text-gray-300"> <MdEmail className="inline mr-2" />Contact</Link>
             <Link 
               to="/compose" 
               onClick={() => setIsMenuOpen(false)} 
@@ -64,8 +72,8 @@ function Navbar() {
             >
               Post a Journal
             </Link>
-            <button onClick={handleLogout} className="bg-red-600 text-white py-2 rounded-md font-medium hover:bg-red-700 hover:text-gray-200">
-              Logout
+            <button onClick={handleLogout} className="bg-red-600 text-white py-1 p-1 rounded-md font-medium hover:bg-red-700 hover:text-gray-200">
+              <TbLogout2 className="inline mr-2" />
             </button>
           </div>
         )}

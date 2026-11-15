@@ -63,7 +63,7 @@ App.post('/api/journal', verifyToken, async (req, res) => {
             {
             title: title.trim(),
             content: content.trim(),
-            user_id: user.id,
+            user_id: req.user.id,
             },
         ])
         .select()
@@ -281,6 +281,7 @@ App.get('/api/journal', verifyToken, async (req, res) => {
         const { data, error } = await supabase
             .from("journal_entries")
             .select("*")
+            .eq("user_id", req.user.id)
             .order("created_at", { ascending: false });
 
 
@@ -328,7 +329,8 @@ App.put("/api/journal/:id", verifyToken, async (req, res) => {
                 title: title.trim(),
                 content: content.trim(),
             })
-            .eq("id", id)
+            .eq("id", req.params.id)
+            .eq("user_id", req.user.id)
             .select();
 
         if (error) throw error;
@@ -363,7 +365,8 @@ App.delete("/api/journal/:id", verifyToken, async (req, res) => {
         const { data, error } = await supabase
             .from("journal_entries")
             .delete()
-            .eq("id", id)
+            .eq("id", req.params.id)
+            .eq("user_id", req.user.id)
             .select();
 
         if (error) throw error;
